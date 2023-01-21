@@ -111,6 +111,9 @@ const Main = () => {
             </div>
 
             <video
+                autoPlay={true}
+                playsInline={true}
+                muted={true}                
                 width={window.innerWidth}
                 height={window.innerHeight}
                 ref={videoRef}
