@@ -1,5 +1,4 @@
 .main {
-    border: 10px solid red;
     .display {
         position: absolute;
         z-index: 99999999999;
@@ -30,7 +29,6 @@
 
                 &:active:hover {
                     opacity: 0.5;
-                    
                 }
             }
         }

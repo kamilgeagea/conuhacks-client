@@ -25,7 +25,7 @@ const Main = () => {
 
     useEffect(() => {
         if (!videoRef) return
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(stream => {
             let video = videoRef.current;
             video.srcObject = stream;
             video.play();
