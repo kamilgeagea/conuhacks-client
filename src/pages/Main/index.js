@@ -6,17 +6,9 @@ import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import axios from 'axios';
 import stringSimilarity from "string-similarity";
-import {  } from "@react-google-maps/api";
+import icon from "../../icon-w-text.svg";
 
 import "./Main.scss";
-
-const used = [];
-
-const photos = [
-    "https://seriouseats.com/thmb/e16lLOoVEix_JZTv7iNyAuWkPn8=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__images__2014__09__20140918-jamie-olivers-comfort-food-insanity-burger-david-loftus-f7d9042bdc2a468fbbd50b10d467dafd.jpg",
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Hamburger_%28black_bg%29.jpg/800px-Hamburger_%28black_bg%29.jpg",
-    "https://www.bhg.com/thmb/QXGyadcA-06uFSeV5woRVtKlFik=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/quick-poutine-BBOQQT52qRM8_P2JsdQxXI-2336ec1ff4744ee89333a3da76fd7ae3.jpg"
-];
 
 function randomIntFromInterval(min, max) { // min and max included 
     return Math.random() * (max - min + 1) + min
@@ -28,6 +20,7 @@ const Main = () => {
     const [tab, setTab] = useState(0);
     const [detections, setDetections] = useState([]);
     const [currentPlace, setCurrentPlace] = useState(null);
+    const [welcome, setWelcome] = useState(true);
 
     useEffect(() => {
         if (!videoRef) return
@@ -59,12 +52,19 @@ const Main = () => {
                 const nearbyPlace = nearbyPlaces[j].properties.name ? nearbyPlaces[j].properties.name.toLowerCase() : "00000000000000";
 
                 if (stringSimilarity.compareTwoStrings(wordFound, nearbyPlace) >= 0.7) {
-                    setDetections(detections => detections.find(detection => detection.properties.place_id === nearbyPlaces[j].properties.place_id) ? detections : [{
+                    const newDetection = {
                         ...nearbyPlaces[j],
                         rating: randomIntFromInterval(3,4).toFixed(2),
                         website: nearbyPlace.replace(/\s/g, '').toLowerCase(),
                         number: "514-" + (Math.floor(Math.random() * 10) + 1).toString() + (Math.floor(Math.random() * 10) + 1).toString() + (Math.floor(Math.random() * 10) + 1).toString() + "-" + (Math.floor(Math.random() * 10) + 1).toString() + (Math.floor(Math.random() * 10) + 1).toString() +(Math.floor(Math.random() * 10) + 1).toString() +(Math.floor(Math.random() * 10) + 1).toString(),
-                    }, ...detections]);
+                    };
+                    setDetections(detections => {
+                        if (detections.length === 0) {
+                            setCurrentPlace(newDetection)
+                        }
+                        return (detections.find(detection => detection.properties.place_id === nearbyPlaces[j].properties.place_id) ? detections : [newDetection, ...detections]
+                        );
+                });
                     break;
                 }
             }
@@ -100,7 +100,7 @@ const Main = () => {
                     method: 'post',
                     url: 'https://vision.googleapis.com/v1/images:annotate',
                     headers: {
-                        'Authorization': 'Bearer ya29.a0AX9GBdVA1JtcvQ5DGHtBSt6LsPQ-1rmmPtswUSOU1td3jP13l7KXihV3u44RtOBPE2MYbppUI3PC49vB5tda5sTZZ-rISrzYFqVAxlkoTrILDblIGc6wq2NNB5cPEPDNs35xvlvYbTQwaNHS5k0yJ5S1R6N3pYNmCctueFI0Ag2M5mFq_K7ZGD_SUAAa35sM_ctdvONCwF6QBZq0D_rBAJ1aBbocA1iRSkuEWnwaCgYKAUoSARESFQHUCsbCDyIMx-0N9bJ1kM5WgXWHDw0238',
+                        'Authorization': 'Bearer ya29.a0AX9GBdXkydzE9W7sMzyaKEsWKEdJlAI6-Mu7FVnmaVYjBlGoaZqupNon4QCuZlolFaF491gDM67nLuFlCEuF5cQ6ouTWMDAdzpxYGDKKcKMZI7gXRySbhC0OmqicamGUZSy-o_ngNHr8UEFBzNPSXgwvqtiPQz1HW0nrZpGoUFz7D50iLxGb7q56EAHQAombVjXVyHi-RJwuY_nDTEY68Tr2giDsodjXqBz1WB8aCgYKAesSARESFQHUCsbCqYdW7A0xyGaPPevEt_aMzw0238',
                         'x-goog-user-project': 'august-balancer-375502',
                         'Content-Type': 'application/json; charset= utf-8'
                     },
@@ -120,8 +120,6 @@ const Main = () => {
                     }                  
                 }).then(res => {
                     const potentialMatches = res.data.responses[0].fullTextAnnotation ? res.data.responses[0].fullTextAnnotation.text.split("\n") : "";
-                    console.log("potential matches", potentialMatches)
-                    console.log("places", places)
                     findMatches(potentialMatches, places);
                 });
             }
@@ -131,6 +129,22 @@ const Main = () => {
     return (
         <div className="main">
             <div className="display">
+
+                <img src={icon} className="main-icon" />
+
+                {welcome && <div className="welcome-modal">
+                    <div className="modal">
+                        <div className="intro-text">Welcome to</div>
+                        <div className="intro-title">NearbyNow!</div>
+
+                        <ol>
+                            <li className="sentence-1">Point your phone at a nearby store or restaurant.</li>
+                            <li className="sentence-2">Click on the top right icon for the business you wish to view.</li>
+                            <li className="sentence-3">Scroll up for more info.</li>
+                        </ol>
+                        <div className="get-started" onClick={() => setWelcome(false)}>Get Started</div>
+                    </div>
+                </div>}
 
                 <div className="places-detected">
                     {detections.map((detection, idx) => (idx < 5) && (
@@ -144,9 +158,7 @@ const Main = () => {
                     ))}
                 </div>
 
-                <div id="image"></div>
-
-                <div className={`sheet ${currentPlace ? 'visible' : ""} ${isOpen ? "open" : ""}`}>
+                {!welcome && currentPlace && <div className={`sheet ${isOpen ? "open" : ""}`}>
                     <div className="fit-padding">
                         <div onClick={() => setOpen(!isOpen)}>
                             <div className="handle">
@@ -175,10 +187,10 @@ const Main = () => {
                             <div className="text">{currentPlace && currentPlace.website}.ca</div>
                             
                         </div>
-                        <div className="info">
+                        <a className="info" href={`tel:+1${currentPlace && currentPlace.number}`}>
                             <LocalPhoneIcon className="icon" />
                             <div className="text">{currentPlace && currentPlace.number}</div>
-                        </div>
+                        </a>
                         <div className="info">
                             <QueryBuilderIcon className="icon" />
                             <div className="text">Closes 5 pm</div>
@@ -191,7 +203,10 @@ const Main = () => {
                     </div>
 
                     {tab === 1 && <div className="fit-padding">Classic, long-running fast-food chain known for its burgers & fries.</div>}
-                </div>
+                </div>}
+                {!welcome && !currentPlace && (
+                    <div className="initial-sheet">Scan your surroundings to discover the wonderful places around you.</div>
+                )}
             </div>
 
             <video
