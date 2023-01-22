@@ -4,6 +4,7 @@ import LanguageIcon from '@mui/icons-material/Language';
 import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import axios from 'axios';
 
 import "./Main.scss";
 
@@ -29,18 +30,105 @@ const Main = () => {
             let video = videoRef.current;
             video.srcObject = stream;
             video.play();
+
+            setInterval(() => {
+                // code here
+                // videoRef.current
+            }, 16.7);
         });
     }, [videoRef]);
+
+    const googleCloutFunc = async () => {
+        // Convert current frame to image
+        let player = document.getElementById('webcam');
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        canvas.width = player.videoWidth;
+        canvas.height = player.videoHeight;
+        ctx.drawImage(player, 0, 0);
+        let imgdata = ctx.getImageData(0,0, canvas.width, canvas.height);
+        let len = imgdata.data.length;
+        for(let i=0; i<len; i=i+4){
+            let red = imgdata.data[i];
+            let green = imgdata.data[i+1];
+            let blue = imgdata.data[i+2];
+            let lum = (red + green + blue)/3;
+            imgdata.data[i] = lum;
+            imgdata.data[i+1] = lum;
+            imgdata.data[i+2] = lum;
+        }
+        ctx.putImageData(imgdata, 0, 0);
+        canvas.toBlob((blob) => {
+            //this code runs AFTER the Blob is extracted
+            let fd = new FormData();
+            fd.append('field-name', blob, 'image-filename.png');
+            // console.log(blob);
+
+            // //load the blob into the image tag
+            // let img = document.createElement('img');
+            // let url = URL.createObjectURL(blob);
+            // img.addEventListener('load', (ev)=>{
+            //     console.log('image from createObjectURL loaded');
+            // })
+            // img.src = url; //use the canvas binary png blob
+            // document.getElementById('image').appendChild(img);
+
+        //     const reader = new FileReader();
+        //     reader.readAsDataURL(blob); 
+        //     reader.onloadend = function() {
+        //         const base64data = reader.result.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+        //         console.log(base64data)
+        //         axios({
+        //             method: 'post',
+        //             url: 'https://vision.googleapis.com/v1/images:annotate',
+        //             headers: {
+        //                 'Authorization': 'Bearer ya29.a0AX9GBdWRR86NgtUchgu_4R_5JfGwR-cpWNHwpT03THcmBixlyPXZx-GbIgf8OMGzdA8xR-VCJcUeJPcmRzyb4sA3YZLR2ma5d2IEk4wNvOn7e4Xzf0dLIyz3jy-S1Eeww-jB4a6Q5S-nYDI7QuontGR3Ap9Y67IbZWpundjrWIMEQEERKQ1mk51W7HMCAMgCYVOwXj2sKneMwZGO3yzGTUWz1mgrzcBy8eO4SAaCgYKAfgSARESFQHUCsbCe26s0b5rjl4Cr32rZKPjiw0237',
+        //                 'x-goog-user-project': 'august-balancer-375502',
+        //                 'Content-Type': 'application/json; charset= utf-8'
+        //             },
+        //             data: {
+        //                 requests: [
+        //                     {
+        //                     image: {
+        //                         content: base64data
+        //                     },
+        //                     features: [
+        //                         {
+        //                         type: "TEXT_DETECTION"
+        //                         }
+        //                     ]
+        //                     }
+        //                 ]
+        //             }                  
+        //         });
+        //     }
+        }, 'image/png'); //create binary png from canvas contents
+    };
+
+    const fetchMap = () => {
+        axios({
+            method: 'get',
+            url: 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=45.4958091,-73.580631&radius=100&key=AIzaSyCvSWxIDZdHQfISX1pnhK8JKab6rlLrCWI',
+            headers: {
+                'Access-Control-Allow-Origin': 'http://localhost:3000'
+            }                
+        });
+    }
 
     return (
         <div className="main">
             <div className="display">
+
+                {/* <button style={{ position: "absolute", top: 0 }} onClick={googleCloutFunc}>Google Cloud Button</button>
+                <button style={{ position: "absolute", top: 50 }} onClick={fetchMap}>Google Maps Button</button> */}
 
                 <div className="places-detected">
                     {placesDetected.map(placeDetected => (
                         <div key={placeDetected} className="place-detected">{placeDetected}</div>
                     ))}
                 </div>
+
+                <div id="image"></div>
 
                 <div className={`sheet ${isOpen && "open"}`}>
                     <div className="fit-padding">
@@ -111,6 +199,7 @@ const Main = () => {
             </div>
 
             <video
+                id="webcam"
                 autoPlay={true}
                 playsInline={true}
                 muted={true}                
@@ -118,6 +207,7 @@ const Main = () => {
                 height={window.innerHeight}
                 ref={videoRef}
             />
+            <canvas id="canvas"></canvas>
         </div>
     );
 };
