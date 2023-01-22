@@ -15,8 +15,7 @@
             right: 20px;
 
             .place-detected {
-                width: 35px;
-                height: 35px;
+                padding: 5px 15px;
                 background-color: rgba(87, 87, 87, 0.75);
                 border-radius: 20px;
                 display: flex;
@@ -34,12 +33,18 @@
         }
         
         .open {
-            height: 550px !important;
+            height: 250px !important;
             transition: height 0.2s ease-in;
             opacity: 1 !important;
         }
 
+        .visible {
+            transform: translateY(0) !important;
+            transition: transform 0.25s ease-in;
+        }
+
         .sheet {
+            transform: translateY(200px);
             z-index: 100;
             padding: 0 0 25px 0;
             width: 100%;

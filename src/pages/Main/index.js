@@ -5,8 +5,12 @@ import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import axios from 'axios';
+import stringSimilarity from "string-similarity";
+import {  } from "@react-google-maps/api";
 
 import "./Main.scss";
+
+const used = [];
 
 const photos = [
     "https://seriouseats.com/thmb/e16lLOoVEix_JZTv7iNyAuWkPn8=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__images__2014__09__20140918-jamie-olivers-comfort-food-insanity-burger-david-loftus-f7d9042bdc2a468fbbd50b10d467dafd.jpg",
@@ -14,15 +18,16 @@ const photos = [
     "https://www.bhg.com/thmb/QXGyadcA-06uFSeV5woRVtKlFik=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/quick-poutine-BBOQQT52qRM8_P2JsdQxXI-2336ec1ff4744ee89333a3da76fd7ae3.jpg"
 ];
 
-const placesDetected = [
-    "Mc",
-    "Za"
-];
+function randomIntFromInterval(min, max) { // min and max included 
+    return Math.random() * (max - min + 1) + min
+  }
 
 const Main = () => {
     const [isOpen, setOpen] = useState(false);
     const videoRef = useRef(null);
     const [tab, setTab] = useState(0);
+    const [detections, setDetections] = useState([]);
+    const [currentPlace, setCurrentPlace] = useState(null);
 
     useEffect(() => {
         if (!videoRef) return
@@ -30,15 +35,43 @@ const Main = () => {
             let video = videoRef.current;
             video.srcObject = stream;
             video.play();
-
-            setInterval(() => {
-                // code here
-                // videoRef.current
-            }, 16.7);
         });
     }, [videoRef]);
 
-    const googleCloutFunc = async () => {
+    useEffect(() => {
+        axios({
+            method: "get",
+            url: "https://api.geoapify.com/v2/places?categories=catering,commercial,accommodation,education,childcare,entertainment,healthcare,rental,service,amenity,ski,activity&filter=circle:-73.57769911783691,45.495842959494865,300&bias=proximity:-73.57769911783691,45.495842959494865&limit=500&apiKey=6c7cdd89d74a4aa0936ed60483946fe6"
+        })
+        .then(res => {
+            setInterval(() => {
+                googleCloutFunc(res.data.features);
+            }, 2000);
+        });
+    }, []);
+
+    const findMatches = (wordsFound, nearbyPlaces) => {
+        wordsFound = wordsFound ? wordsFound.map(word => word.toLowerCase()) : "";
+
+        for (let i = 0; i < wordsFound.length; i++) {
+            for (let j = 0; j < nearbyPlaces.length; j++) {
+                const wordFound = wordsFound[i];
+                const nearbyPlace = nearbyPlaces[j].properties.name ? nearbyPlaces[j].properties.name.toLowerCase() : "00000000000000";
+
+                if (stringSimilarity.compareTwoStrings(wordFound, nearbyPlace) >= 0.7) {
+                    setDetections(detections => detections.find(detection => detection.properties.place_id === nearbyPlaces[j].properties.place_id) ? detections : [{
+                        ...nearbyPlaces[j],
+                        rating: randomIntFromInterval(3,4).toFixed(2),
+                        website: nearbyPlace.replace(/\s/g, '').toLowerCase(),
+                        number: "514-" + (Math.floor(Math.random() * 10) + 1).toString() + (Math.floor(Math.random() * 10) + 1).toString() + (Math.floor(Math.random() * 10) + 1).toString() + "-" + (Math.floor(Math.random() * 10) + 1).toString() + (Math.floor(Math.random() * 10) + 1).toString() +(Math.floor(Math.random() * 10) + 1).toString() +(Math.floor(Math.random() * 10) + 1).toString(),
+                    }, ...detections]);
+                    break;
+                }
+            }
+        }
+    };
+
+    const googleCloutFunc = async (places) => {
         // Convert current frame to image
         let player = document.getElementById('webcam');
         let canvas = document.getElementById('canvas');
@@ -59,78 +92,61 @@ const Main = () => {
         }
         ctx.putImageData(imgdata, 0, 0);
         canvas.toBlob((blob) => {
-            //this code runs AFTER the Blob is extracted
-            let fd = new FormData();
-            fd.append('field-name', blob, 'image-filename.png');
-            // console.log(blob);
-
-            // //load the blob into the image tag
-            // let img = document.createElement('img');
-            // let url = URL.createObjectURL(blob);
-            // img.addEventListener('load', (ev)=>{
-            //     console.log('image from createObjectURL loaded');
-            // })
-            // img.src = url; //use the canvas binary png blob
-            // document.getElementById('image').appendChild(img);
-
-        //     const reader = new FileReader();
-        //     reader.readAsDataURL(blob); 
-        //     reader.onloadend = function() {
-        //         const base64data = reader.result.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
-        //         console.log(base64data)
-        //         axios({
-        //             method: 'post',
-        //             url: 'https://vision.googleapis.com/v1/images:annotate',
-        //             headers: {
-        //                 'Authorization': 'Bearer ya29.a0AX9GBdWRR86NgtUchgu_4R_5JfGwR-cpWNHwpT03THcmBixlyPXZx-GbIgf8OMGzdA8xR-VCJcUeJPcmRzyb4sA3YZLR2ma5d2IEk4wNvOn7e4Xzf0dLIyz3jy-S1Eeww-jB4a6Q5S-nYDI7QuontGR3Ap9Y67IbZWpundjrWIMEQEERKQ1mk51W7HMCAMgCYVOwXj2sKneMwZGO3yzGTUWz1mgrzcBy8eO4SAaCgYKAfgSARESFQHUCsbCe26s0b5rjl4Cr32rZKPjiw0237',
-        //                 'x-goog-user-project': 'august-balancer-375502',
-        //                 'Content-Type': 'application/json; charset= utf-8'
-        //             },
-        //             data: {
-        //                 requests: [
-        //                     {
-        //                     image: {
-        //                         content: base64data
-        //                     },
-        //                     features: [
-        //                         {
-        //                         type: "TEXT_DETECTION"
-        //                         }
-        //                     ]
-        //                     }
-        //                 ]
-        //             }                  
-        //         });
-        //     }
+            const reader = new FileReader();
+            reader.readAsDataURL(blob); 
+            reader.onloadend = function() {
+                const base64data = reader.result.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+                axios({
+                    method: 'post',
+                    url: 'https://vision.googleapis.com/v1/images:annotate',
+                    headers: {
+                        'Authorization': 'Bearer ya29.a0AX9GBdVA1JtcvQ5DGHtBSt6LsPQ-1rmmPtswUSOU1td3jP13l7KXihV3u44RtOBPE2MYbppUI3PC49vB5tda5sTZZ-rISrzYFqVAxlkoTrILDblIGc6wq2NNB5cPEPDNs35xvlvYbTQwaNHS5k0yJ5S1R6N3pYNmCctueFI0Ag2M5mFq_K7ZGD_SUAAa35sM_ctdvONCwF6QBZq0D_rBAJ1aBbocA1iRSkuEWnwaCgYKAUoSARESFQHUCsbCDyIMx-0N9bJ1kM5WgXWHDw0238',
+                        'x-goog-user-project': 'august-balancer-375502',
+                        'Content-Type': 'application/json; charset= utf-8'
+                    },
+                    data: {
+                        requests: [
+                            {
+                            image: {
+                                content: base64data
+                            },
+                            features: [
+                                {
+                                type: "TEXT_DETECTION"
+                                }
+                            ]
+                            }
+                        ]
+                    }                  
+                }).then(res => {
+                    const potentialMatches = res.data.responses[0].fullTextAnnotation ? res.data.responses[0].fullTextAnnotation.text.split("\n") : "";
+                    console.log("potential matches", potentialMatches)
+                    console.log("places", places)
+                    findMatches(potentialMatches, places);
+                });
+            }
         }, 'image/png'); //create binary png from canvas contents
     };
-
-    const fetchMap = () => {
-        axios({
-            method: 'get',
-            url: 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=45.4958091,-73.580631&radius=100&key=AIzaSyCvSWxIDZdHQfISX1pnhK8JKab6rlLrCWI',
-            headers: {
-                'Access-Control-Allow-Origin': 'http://localhost:3000'
-            }                
-        });
-    }
 
     return (
         <div className="main">
             <div className="display">
 
-                {/* <button style={{ position: "absolute", top: 0 }} onClick={googleCloutFunc}>Google Cloud Button</button>
-                <button style={{ position: "absolute", top: 50 }} onClick={fetchMap}>Google Maps Button</button> */}
-
                 <div className="places-detected">
-                    {placesDetected.map(placeDetected => (
-                        <div key={placeDetected} className="place-detected">{placeDetected}</div>
+                    {detections.map((detection, idx) => (idx < 5) && (
+                        <div
+                            key={detection.properties.place_id}
+                            className="place-detected"
+                            onClick={() => {
+                                setCurrentPlace(detection)
+                            }}
+                        >{detection.properties.name}</div>
                     ))}
                 </div>
 
                 <div id="image"></div>
 
-                <div className={`sheet ${isOpen && "open"}`}>
+                <div className={`sheet ${currentPlace ? 'visible' : ""} ${isOpen ? "open" : ""}`}>
                     <div className="fit-padding">
                         <div onClick={() => setOpen(!isOpen)}>
                             <div className="handle">
@@ -138,16 +154,16 @@ const Main = () => {
                             </div>
 
                             <div className="title-row">
-                                <div className="title">McDonald's</div>
+                                <div className="title">{currentPlace && (currentPlace.properties.name ? currentPlace.properties.name : "")}</div>
                                 <div className="rating">
-                                    <div className="score">4.5</div>
+                                    <div className="score">{currentPlace && currentPlace.rating}</div>
                                     <StarIcon className="star-icon" />
                                 </div>
                             </div>
 
                             <div className="description-row">
                                 <div className="place-type">
-                                    <div className="type">Restaurant</div>
+                                    <div className="type">{"Store"}</div>
                                     <div className="cost"> . $$</div>
                                 </div>
                                 <div className="place-status">Open</div>
@@ -156,12 +172,12 @@ const Main = () => {
 
                         <div className="info">
                             <LanguageIcon className="icon" />
-                            <div className="text">mcdonalds.com</div>
+                            <div className="text">{currentPlace && currentPlace.website}.ca</div>
                             
                         </div>
                         <div className="info">
                             <LocalPhoneIcon className="icon" />
-                            <div className="text">514-697-2799</div>
+                            <div className="text">{currentPlace && currentPlace.number}</div>
                         </div>
                         <div className="info">
                             <QueryBuilderIcon className="icon" />
@@ -169,30 +185,10 @@ const Main = () => {
                         </div>
                         <div className="info">
                             <LocationOnIcon className="icon" />
-                            <div className="text">17000 Trans-Canada Hwy, Kirkland, Quebec H9J 2M5, Canada</div>
-                        </div>
-
-
-                        <div className="tab-menu">
-                            <div className="menu">
-                                <div
-                                    className={`item ${tab === 0 && "active"}`}
-                                    onClick={() => setTab(0)}
-                                >Photos</div>
-                                <div
-                                    className={`item ${tab === 1 && "active"}`}
-                                    onClick={() => setTab(1)}
-                                >About</div>
-                            </div>
+                            <div className="text">{currentPlace && (currentPlace.properties.address_line2 ? currentPlace.properties.address_line2 : "")}</div>
                         </div>
 
                     </div>
-
-                    {tab === 0 && (<div className="photos">
-                        {photos.map(photo => (
-                            <img key={photo} src={photo} />
-                        ))}
-                    </div>)}
 
                     {tab === 1 && <div className="fit-padding">Classic, long-running fast-food chain known for its burgers & fries.</div>}
                 </div>
@@ -207,7 +203,7 @@ const Main = () => {
                 height={window.innerHeight}
                 ref={videoRef}
             />
-            <canvas id="canvas"></canvas>
+            <canvas style={{ display: "none" }} id="canvas"></canvas>
         </div>
     );
 };
